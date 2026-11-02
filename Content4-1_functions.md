@@ -1,0 +1,439 @@
+---
+title: "Content 4-1: Getting started with functions"
+date: "Monday, November 2, 2026"
+output: 
+  html_document:
+    number_sections: false
+    toc: true
+    toc_depth: 1
+    keep_md: yes
+---
+
+
+In Module 4, we will learn to write functions.  In Class 4-1, we will learn the basics of functions.  In later classes, we will learn about conditional execution and write more complicated functions.
+
+*Note:* These class activities are adapted from "R for Data Science" by Grolemund and Wickham, chapter 19.  You can find this chapter [here](https://r4ds.had.co.nz/functions.html#when-should-you-write-a-function).
+
+# What is a function?
+
+A **function** takes an input (or set of inputs) and produces an output (or set of outputs). We've worked with lots of functions so far in `R`, like `mean()`, `mutate()`, and others.  What are the inputs and outputs of these functions?
+
+If you open the help file for `mean()`, you can see what the inputs and outputs of the function will be.
+
+``` r
+?mean
+```
+The inputs of the function are listed under the **Arguments** section of the help file.  The outputs are listed in the **Value** section of the help file.  
+
+We'll learn more about types of function arguments next week, but from this help file you can see that the inputs to the `mean()` function are a vector, `x`, of which we will calculate the mean and some options for calculating the mean called `trim`, `na.rm`, and `...`.  
+
+In terms of the output for this function, from the **Value** section we see that the function produces the arithmetic mean of the values in the `x` input vector as a vector of length one.  If the argument `trim` is given a value other than 0, then a fraction of the largest/smallest observations are removed (trimmed) before the mean is calculated.
+
+# Why should you use functions?
+
+Functions are useful because they allow us to automate tasks that we do a lot instead of copying and pasting.  This is why for common tasks there are already functions in `R` to do these things.  However, we may want to write our own functions to avoid using copy/paste for our own unique tasks.
+
+There are three big advantages of functions over copy/paste:
+
+(1) Including functions in your code can make your code easier to understand -- you can break down complicated code into smaller pieces (functions) with names that clearly describe what each piece is doing.
+
+(2) If you need to update/change your code, you only need to do so in one place (the function itself) instead of every place you want to do the task.
+
+(3) You reduce the chance of incidental mistakes that happen during copy/paste, such as forgetting to change the variable name in one line of code.
+
+# When should you use functions?
+
+A good rule of thumb is that you should write a function whenever you've copied and pasted the same block of code more than twice.  Then it is probably worth your time to create a function to do the task instead.
+
+Look at the code below.  What does it do?
+
+``` r
+# Creates data frame (tibble) with 4 variables
+df <- tibble::tibble(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10)
+)
+
+# Look at this tibble
+df
+```
+
+```
+## # A tibble: 10 × 4
+##          a        b        c       d
+##      <dbl>    <dbl>    <dbl>   <dbl>
+##  1 -1.10    0.757   -0.942    2.04  
+##  2  0.833   0.431   -1.20    -2.24  
+##  3 -0.196   0.286    1.27    -0.0919
+##  4  1.29   -1.55     1.14     0.928 
+##  5 -0.219   0.00529 -0.00849  0.127 
+##  6 -0.0551 -0.0628   0.00964 -1.48  
+##  7 -0.120  -1.91    -0.185    1.69  
+##  8  0.368   1.39    -0.801   -1.41  
+##  9  1.44    0.665   -1.37     0.882 
+## 10 -0.352   2.04     0.628    0.247
+```
+
+``` r
+# What does this code do?
+df$a <- (df$a - min(df$a, na.rm = TRUE)) / 
+  (max(df$a, na.rm = TRUE) - min(df$a, na.rm = TRUE))
+df$b <- (df$b - min(df$b, na.rm = TRUE)) / 
+  (max(df$b, na.rm = TRUE) - min(df$a, na.rm = TRUE))
+df$c <- (df$c - min(df$c, na.rm = TRUE)) / 
+  (max(df$c, na.rm = TRUE) - min(df$c, na.rm = TRUE))
+df$d <- (df$d - min(df$d, na.rm = TRUE)) / 
+  (max(df$d, na.rm = TRUE) - min(df$d, na.rm = TRUE))
+```
+
+This code rescales each column of the tibble to have a range from 0 to 1.  It does this by subtracting the minimum value from each observation and the dividing by the range (maximum - minimum) of the column.  You can verify this by looking at the tibble again.
+
+``` r
+df
+```
+
+```
+## # A tibble: 10 × 4
+##        a     b      c     d
+##    <dbl> <dbl>  <dbl> <dbl>
+##  1 0     1.30  0.161  1    
+##  2 0.760 1.14  0.0650 0    
+##  3 0.356 1.07  1      0.501
+##  4 0.940 0.174 0.954  0.740
+##  5 0.347 0.937 0.516  0.553
+##  6 0.411 0.903 0.523  0.177
+##  7 0.385 0     0.449  0.918
+##  8 0.577 1.62  0.215  0.194
+##  9 1     1.26  0      0.729
+## 10 0.294 1.93  0.758  0.581
+```
+
+**However, there's a mistake in the code -- can you find it?** There's a copy/paste error where one `a` wasn't changed to a `b` as was intended. And that's why the `b` column wasn't rescaled correctly to be between 0 and 1.
+
+This code is a good candidate for a function instead.
+
+# How to write a function
+
+To create a function, it's helpful to look at just one iteration of the code:
+
+``` r
+(df$a - min(df$a, na.rm = TRUE)) /
+  (max(df$a, na.rm = TRUE) - min(df$a, na.rm = TRUE))
+```
+
+```
+##  [1] 0.0000000 0.7604462 0.3556638 0.9397221 0.3465386 0.4109755 0.3853747
+##  [8] 0.5775000 1.0000000 0.2941704
+```
+
+How many inputs does this code have? What are they?
+
+From the snippet of code above, you can see the main input is the column of the tibble, `df$a`.  There's also an option having to do with `na.rm = TRUE`.
+
+Once we have the inputs determined, it's a good idea to rewrite the code with a temporary input variable with a generic name like `x`.  We assign that temporary variable before the main piece of code and then replace the input variable with that temporary variable wherever it appears in the code:
+
+``` r
+x <- df$a
+
+(x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+```
+
+```
+##  [1] 0.0000000 0.7604462 0.3556638 0.9397221 0.3465386 0.4109755 0.3853747
+##  [8] 0.5775000 1.0000000 0.2941704
+```
+
+This code already looks easier to read!  But to make the code even easier to read, we might notice there's some duplication: we are calculating the minimum value twice!  We can instead assign intermediate values to variables with meaningful names.  The following changes make the code even more readable.
+
+``` r
+x <- df$a
+min_x <- min(x, na.rm = TRUE)
+max_x <- max(x, na.rm = TRUE)
+
+(x - min_x) / (max_x - min_x)
+```
+
+```
+##  [1] 0.0000000 0.7604462 0.3556638 0.9397221 0.3465386 0.4109755 0.3853747
+##  [8] 0.5775000 1.0000000 0.2941704
+```
+
+Pulling out intermediate calculations into separate variables with meaningful names is good practice because it makes it more clear what the code is doing.
+
+Now we can turn our code into a function using the `function()` function:
+
+``` r
+rescale01 <- function(x) {
+  min_x <- min(x, na.rm = TRUE)
+  max_x <- max(x, na.rm = TRUE)
+  
+  (x - min_x) / (max_x - min_x)
+}
+```
+
+To define our function so we can use it, we need to run the chunk of code that contains the function definition (above).  Now we can use the function in our subsequent code.  Each time we start a fresh `R` instance, we will need to redefine our function by running the code again.
+
+[Note: you can see that this function is defined in the `Environment` tab in the upper right window of RStudio.  Click on this tab and scroll down to see all the functions in your current environment.]
+
+Let's use our function (be sure to first run the code chunk above that defines it!):
+
+``` r
+rescale01(df$a)
+```
+
+```
+##  [1] 0.0000000 0.7604462 0.3556638 0.9397221 0.3465386 0.4109755 0.3853747
+##  [8] 0.5775000 1.0000000 0.2941704
+```
+
+``` r
+rescale01(df$b)
+```
+
+```
+##  [1] 0.67452211 0.59202306 0.55530892 0.08991605 0.48425499 0.46701948
+##  [7] 0.00000000 0.83567502 0.65110938 1.00000000
+```
+
+``` r
+rescale01(df$c)
+```
+
+```
+##  [1] 0.16138955 0.06504153 1.00000000 0.95429942 0.51614879 0.52303642
+##  [7] 0.44924667 0.21490463 0.00000000 0.75807115
+```
+
+``` r
+rescale01(df$d)
+```
+
+```
+##  [1] 1.0000000 0.0000000 0.5014141 0.7396400 0.5525945 0.1769408 0.9179879
+##  [8] 0.1937313 0.7288187 0.5806070
+```
+
+There are three key steps to creating a new function:
+
+(1) You need to pick a **name** for the function. You should make the name meaningful to the task the function does.  Here the name `rescale01` nicely describes what this function rescales a vector to values between 0 and 1.
+
+(2) You list the inputs of the function, called **arguments**, inside `function()`. Here there is just one argument, `x`. If we had more arguments, we would have something that looks like `function(x, y, z)`.
+
+(3) You place the code that does the task in the **body** of the function, a block between `{` and `}` that immediately follows `function(...)`.
+
+Creating a function is **much** easier after you've already figured out how to make the code work with a single iteration of the task and a simple input.  So a good process is to create the function once you already have working code.
+
+It's also a good idea to check your function with a few different inputs.  For example, will it work with negative numbers?  What about missing `NA` values?  What about infinite values?
+
+
+``` r
+rescale01(c(-10, 0, 10))
+```
+
+```
+## [1] 0.0 0.5 1.0
+```
+
+``` r
+rescale01(c(1, 2, 3, NA, 5))
+```
+
+```
+## [1] 0.00 0.25 0.50   NA 1.00
+```
+
+``` r
+rescale01(c(1:10, Inf))
+```
+
+```
+##  [1]   0   0   0   0   0   0   0   0   0   0 NaN
+```
+
+It looks like if our variable contains infinite values then the `rescale01()` function fails!  We may want to update our code as follows to account for this:
+
+``` r
+rescale01 <- function(x) {
+  min_x <- min(x[is.finite(x)], na.rm = TRUE)
+  max_x <- max(x[is.finite(x)], na.rm = TRUE)
+  
+  (x - min_x) / (max_x - min_x)
+}
+```
+
+And now try our variable with infinite values again:
+
+``` r
+rescale01(c(1:10, Inf))
+```
+
+```
+##  [1] 0.0000000 0.1111111 0.2222222 0.3333333 0.4444444 0.5555556 0.6666667
+##  [8] 0.7777778 0.8888889 1.0000000       Inf
+```
+
+Notice that we only needed to fix the code in one place, in the function itself! To update our function definition, we just need to run the code that redefines our function and now whenever we use it, the function will be "fixed".  This is an important part of the “do not repeat yourself” (or DRY) principle. The more repetition you have in your code, the more places you need to remember to update when things change (and they always do!), and the more likely you are to create bugs over time.
+
+# Practice 
+
+1. See what happens when we delete the `rescale01()` function from our environment and then try to run the following code:
+
+``` r
+# remove/delete the rescale01 function
+rm(rescale01)
+
+rescale01(df$a)
+rescale01(df$b)
+rescale01(df$c)
+rescale01(df$d)
+```
+How can you fix this problem?
+
+2. Turn the following code into a function.  Think about what the function does. What would you call it? How many arguments does it need? Can you rewrite it to be more expressive or less duplicative?
+
+``` r
+mean(is.na(x))
+```
+
+3. Turn the following code into a function.  Think about what the function does. What would you call it? How many arguments does it need? Can you rewrite it to be more expressive or less duplicative?
+
+``` r
+x / sum(x, na.rm = TRUE)
+```
+
+4. Turn the following code into a function.  Think about what the function does. What would you call it? How many arguments does it need? Can you rewrite it to be more expressive or less duplicative?
+
+``` r
+sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE)
+```
+
+5. Write `both_na()`, a function that takes two vectors of the same length and returns the number of positions that have an NA in both vectors.
+
+
+
+# Function arguments
+
+For functions that work with data, there are generally two types of arguments: ones that supply the data to compute on and ones that control the details of the computation to be done on that data.  For example:
+
+* In `log()`, the data is `x`, and the detail is `base` which provides the base of the logarithm.
+
+``` r
+?log
+```
+
+```
+## Help on topic 'log' was found in the following packages:
+## 
+##   Package               Library
+##   base                  /Library/Frameworks/R.framework/Resources/library
+##   otel                  /Library/Frameworks/R.framework/Versions/4.6/Resources/library
+## 
+## 
+## Using the first match ...
+```
+
+* In `mean()`, the data is `x`, and the details are `trim`, which tells how much data to trim from the ends and `na.rm` which tells how to handle missing values.
+
+``` r
+?mean
+```
+
+* In `t.test()`, the data are `x` and `y`, and the details needed for the test are `alternative`, `mu`, `paired`, `var.equal`, and `conf.level`.
+
+``` r
+?t.test
+```
+
+Generally, data arguments should come first. Detail arguments should go on the end, and usually should have default values. 
+
+For example, rather than forcing missing values to be removed, we may want to allow the user to specify how missing values should be treated in our `rescale01` function. We can do this by including a second argument, which we call `naFlag` and which we provide a default value of `TRUE`, i.e., if the user does not specify anything, missing values will be removed by default.
+
+
+``` r
+rescale01 <- function(x, naFlag = TRUE) {
+  min_x <- min(x[is.finite(x)], na.rm = naFlag)
+  max_x <- max(x[is.finite(x)], na.rm = naFlag)
+  
+  (x - min_x) / (max_x - min_x)
+}
+```
+
+Here are some examples of how this function might behave:
+
+
+``` r
+rescale01(c(-10, 0, 10))
+```
+
+```
+## [1] 0.0 0.5 1.0
+```
+
+``` r
+rescale01(c(1, 2, 3, NA, 5))
+```
+
+```
+## [1] 0.00 0.25 0.50   NA 1.00
+```
+
+``` r
+rescale01(c(1:10, Inf))
+```
+
+```
+##  [1] 0.0000000 0.1111111 0.2222222 0.3333333 0.4444444 0.5555556 0.6666667
+##  [8] 0.7777778 0.8888889 1.0000000       Inf
+```
+
+``` r
+rescale01(c(-10, 0, 10), naFlag = FALSE)
+```
+
+```
+## [1] 0.0 0.5 1.0
+```
+
+``` r
+rescale01(c(1, 2, 3, NA, 5), naFlag = FALSE)
+```
+
+```
+## [1] 0.00 0.25 0.50   NA 1.00
+```
+
+``` r
+rescale01(c(1:10, Inf), naFlag = FALSE)
+```
+
+```
+##  [1] 0.0000000 0.1111111 0.2222222 0.3333333 0.4444444 0.5555556 0.6666667
+##  [8] 0.7777778 0.8888889 1.0000000       Inf
+```
+
+You'll want to take note of this for your mini-assignment for this week!
+
+A good rule of thumb is to choose the default value for the detail arguments to be the *most commonly used* value.  The one exception to this rule is when the most commonly used value might allow the user to not be aware of something important, such as the fact there are missing values.  So the default for `na.rm` arguments is usually `FALSE` so the user must be aware there are missing values and must make the choice to ignore them instead of ignoring them by default. (Which is not how I have written things up above -- how would you change it?)
+
+
+# Tips for writing useable functions
+
+Here are some things to keep in mind when writing functions to make your code readable and useable:
+
+(1) Choose your function name carefully!  Keep it short but still meaningful as to what the function actually does.  One rule of thumb is that function names should be verbs (telling what the function *does*) while function arguments should be nouns (telling what the arguments *are*).
+
+* `f()` is too short and tells nothing about what the function does
+* `my_awesome_function()` gives no description about what the function does
+
+(2) If your function names includes multiple words, put them together with either `snake_case` or `camelCase` to differentiate the words.  Be consistent!
+
+* `impute_missing()` and `collapse_years()` are good descriptive function names
+
+(3) Try not to overwrite function that already exist in `R`.
+
+* `mean()` is already an `R` function; overwriting it will cause you trouble later!
+
+(4) Include comments, which are lines starting with `#`, to explain why you are doing something in your function: why did you choose this approach instead of an alternative?  What else did you try that didn't work?  
+
